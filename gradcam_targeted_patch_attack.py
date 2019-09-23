@@ -404,6 +404,10 @@ if __name__ == '__main__':
     pretrained_vgg_net = pretrained_vgg_net.eval()
     image_name = args.image_path.split('/')[-1].split('.')[0]
 
+    # Create result directory if it doesn't exist
+    if not os.path.exists(args.result_dir):
+        os.makedirs(args.result_dir)
+
     # Read the input image and preprocess to a tensor
     img = cv2.imread(args.image_path, 1)
     img = np.float32(cv2.resize(img, (224, 224))) / 255
