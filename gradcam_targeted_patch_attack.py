@@ -192,7 +192,7 @@ class GradCamAttack:
             if i % 10 == 0:
                 print('Iteration:{}\tGradCAM Loss:{:.3f}\tCE Loss:{:.3f}\ttotal_pert.mean:{:.3f}\tOrig index:{}'
                       '\tTarget index:{}\tPred index:{}'.format(i, gcam_loss, xe_loss, dl_dx_cumulative.abs().mean(),
-                                                                index, target_index, pred_index))
+                                                                index, target_class_index, pred_index))
 
         # Store the resulting adversarial image tensor
         res_adv_tensor = image_tensor.clone()
@@ -293,7 +293,7 @@ class GradCamRegPatchAttack:
             if i % 10 == 0:
                 print('Iteration:{}\tCE Loss:{:.3f}\ttotal_pert.mean:{:.3f}\tOrig index:{}\tTarget index:{}'
                       '\tPred index:{}'.format(i, xe_loss, dl_dx_cumulative.abs().mean(),
-                                               index, target_index, pred_index))
+                                               index, target_class_index, pred_index))
 
         # Store the resulting adversarial image tensor
         res_adv_tensor = image_tensor.clone()
