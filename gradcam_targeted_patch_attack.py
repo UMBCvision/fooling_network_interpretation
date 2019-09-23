@@ -99,9 +99,9 @@ class GradCamAttack:
         self.extractor = ModelOutputs(self.model, target_layer_names)
         self.relu = torch.nn.ReLU()
 
-    def __call__(self, image_tensor, index, target_cat_index, lr=.005, eps=0.007, lambda_val=0.05, attack_iters=750):
+    def __call__(self, image_tensor, index, target_class_index, lr=.005, eps=0.007, lambda_val=0.05, attack_iters=750):
         print('\n\nOur adversarial patch attack:\n\n')
-        print('Before attack, Predicted class:{}\tTarget class:{}\n\n'.format(index, target_cat_index))
+        print('Before attack, Predicted class:{}\tTarget class:{}\n\n'.format(index, target_class_index))
 
         # Clone the original image for computing the adversarial image with the patch
         adv_image_tensor = image_tensor.clone()
@@ -127,10 +127,11 @@ class GradCamAttack:
         loss_zero_counter = 0
         for i in range(attack_iters):
             adv_features, adv_output = self.extractor(adv_image_tensor)
+            pred_index = np.argmax(adv_output.cpu().data.numpy())
 
             # Create a one-hot tensor for the target category
             one_hot = np.zeros((1, adv_output.size()[-1]), dtype=np.float32)
-            one_hot[0][target_cat_index] = 1
+            one_hot[0][target_class_index] = 1
             one_hot = Variable(torch.from_numpy(one_hot), requires_grad=True)
             one_hot_tensor = torch.sum(one_hot.cuda() * adv_output)
 
@@ -147,7 +148,7 @@ class GradCamAttack:
             # Compute gradient weighted class activations for the perturbed image
             grad_weighted_feats = dy_dz_sum.unsqueeze(-1).unsqueeze(-1) * adv_features[0]
             gcam = grad_weighted_feats.sum(dim=1).squeeze(0)
-            gcam = self.relu(gcam + torch.ones_like(gcam))
+            gcam = self.relu(gcam)
 
             # Normalize the gradcam tensor
             gcam = gcam / (gcam.sum() + 1e-10)
@@ -159,10 +160,10 @@ class GradCamAttack:
             gcam_loss = gcam_loss / 16.0
 
             # Add the cross entropy loss if target category is not the top predicted category
-            if np.argmax(adv_output.cpu().data.numpy()) == target_cat_index:
+            if np.argmax(adv_output.cpu().data.numpy()) == target_class_index:
                 xe_loss = 0.0
             else:
-                xe_loss = self.criterion(adv_output, torch.tensor([target_cat_index], dtype=torch.long).cuda())
+                xe_loss = self.criterion(adv_output, torch.tensor([target_class_index], dtype=torch.long).cuda())
 
             # We minimize both the gradcam loss and cross entropy loss
             total_loss = gcam_loss + (lambda_val * xe_loss)
@@ -189,9 +190,9 @@ class GradCamAttack:
                                                                                   channel_clamp_max[c])
 
             if i % 10 == 0:
-                print('Iteration:{}\tGradCAM Loss:{}\t CE Loss:{}\t dl_dx:{}\t '
-                      'total_pert.mean:{}'.format(i, gcam_loss, xe_loss, dl_dx.abs().mean(),
-                                                  dl_dx_cumulative.abs().mean()))
+                print('Iteration:{}\tGradCAM Loss:{:.3f}\tCE Loss:{:.3f}\ttotal_pert.mean:{:.3f}\tOrig index:{}'
+                      '\tTarget index:{}\tPred index:{}'.format(i, gcam_loss, xe_loss, dl_dx_cumulative.abs().mean(),
+                                                                index, target_index, pred_index))
 
         # Store the resulting adversarial image tensor
         res_adv_tensor = image_tensor.clone()
@@ -201,7 +202,7 @@ class GradCamAttack:
         _, adv_output = self.extractor(res_adv_tensor)
 
         print('\n\nAfter attack, Original class: {}\tPredicted class: {}\tTarget class: {}'.
-              format(index, adv_output[0].argmax(), target_cat_index))
+              format(index, adv_output[0].argmax(), target_class_index))
 
         # Denormalize the adversarial image
         adv_img = res_adv_tensor.data[0].cpu().numpy()
@@ -223,9 +224,9 @@ class GradCamRegPatchAttack:
         self.criterion = torch.nn.CrossEntropyLoss().cuda()
         self.extractor = ModelOutputs(self.model, target_layer_names)
 
-    def __call__(self, image_tensor, index, target_cat_index, lr=.005, eps=0.007, lambda_val=0.05, attack_iters=750):
+    def __call__(self, image_tensor, index, target_class_index, lr=.005, eps=0.007, lambda_val=0.05, attack_iters=750):
         print('\n\nRegular adversarial patch attack:\n\n')
-        print('Before attack, Predicted class:{}\tTarget class:{}\n'.format(index, target_cat_index))
+        print('Before attack, Predicted class:{}\tTarget class:{}\n'.format(index, target_class_index))
 
         # Clone the original image for computing the perturbed adversarial image
         adv_image_tensor = image_tensor.clone() + torch.randn(image_tensor.size()).cuda() / 100
@@ -258,7 +259,7 @@ class GradCamRegPatchAttack:
             self.model.classifier.zero_grad()
 
             # Stop the attack once the target category is reached for 5 consecutive attack iterations
-            if i > 250 and pred_index == target_cat_index:
+            if i > 250 and pred_index == target_class_index:
                 if target_flip_counter > 5:
                     break
                 else:
@@ -266,11 +267,10 @@ class GradCamRegPatchAttack:
             else:
                 target_flip_counter = 0
 
-            xe_loss = self.criterion(adv_output, torch.tensor([target_cat_index], dtype=torch.long).cuda())
-            total_loss = (lambda_val * xe_loss)
+            xe_loss = self.criterion(adv_output, torch.tensor([target_class_index], dtype=torch.long).cuda())
 
-            # Stop the attack once the total loss is zero for 5 consecutive attack iterations
-            if total_loss == 0.0:
+            # Stop the attack once the loss is zero for 5 consecutive attack iterations
+            if xe_loss == 0.0:
                 if loss_zero_counter > 5:
                     break
                 else:
@@ -279,7 +279,7 @@ class GradCamRegPatchAttack:
                 loss_zero_counter = 0
 
             # Compute the gradient of the total loss with respect to the perturbed image
-            dl_dx, = torch.autograd.grad(total_loss, adv_image_tensor)
+            dl_dx, = torch.autograd.grad(xe_loss, adv_image_tensor)
 
             # Perform gradient ascent using the sign of dl_dx to compute the cumulative perturbation
             dl_dx_cumulative = dl_dx_cumulative - lr * torch.sign(dl_dx)
@@ -291,8 +291,9 @@ class GradCamRegPatchAttack:
                                                                                   channel_clamp_max[c])
 
             if i % 10 == 0:
-                print('Iteration:{}\tCE Loss:{}\tOrig index:{}\tTarget index: {}'
-                      '\tPred index:{}'.format(i, xe_loss, index, target_cat_index, pred_index))
+                print('Iteration:{}\tCE Loss:{:.3f}\ttotal_pert.mean:{:.3f}\tOrig index:{}\tTarget index:{}'
+                      '\tPred index:{}'.format(i, xe_loss, dl_dx_cumulative.abs().mean(),
+                                               index, target_index, pred_index))
 
         # Store the resulting adversarial image tensor
         res_adv_tensor = image_tensor.clone()
@@ -302,7 +303,7 @@ class GradCamRegPatchAttack:
         _, adv_output = self.extractor(res_adv_tensor)
 
         print('\n\nAfter attack, Original class: {}\tPredicted class: {}\tTarget class: {}'.
-              format(index, adv_output[0].argmax(), target_cat_index))
+              format(index, adv_output[0].argmax(), target_class_index))
 
         # Denormalize the adversarial image
         adv_img = res_adv_tensor.data[0].cpu().numpy()
@@ -345,7 +346,7 @@ class GradCam:
         target = target.cpu().data.numpy()[0, :]
 
         weights = np.mean(grads_val, axis=(2, 3))[0, :]
-        cam = np.ones(target.shape[1:], dtype=np.float32)
+        cam = np.zeros(target.shape[1:], dtype=np.float32)
 
         for i, w in enumerate(weights):
             cam += w * target[i, :, :]
@@ -386,7 +387,7 @@ def get_args():
 
 
 if __name__ == '__main__':
-    """ python gradcam_targeted_patch_attack.py --image-path <path_to_image> --result-path <path_to_result_dir>
+    """ python gradcam_targeted_patch_attack.py --image-path <path_to_image> --result-dir <path_to_result_dir>
     1. Loads an image with opencv.
     2. Preprocesses it for VGG19 and converts to a pytorch variable.
     3. Makes a forward pass to find the category index with the highest score,
@@ -394,6 +395,13 @@ if __name__ == '__main__':
     Makes the visualization. """
 
     args = get_args()
+
+    # Setting the seed for reproducibility for demo
+    # Comment the below 4 lines for the target category to be random across runs
+    np.random.seed(1)
+    torch.manual_seed(1)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     # Can work with any model, but it assumes that the model has a feature method,
     # and a classifier method, as in the VGG models in torchvision.
@@ -428,7 +436,7 @@ if __name__ == '__main__':
     cv2.imwrite(os.path.join(args.result_dir, image_name + '_reg_adv_patch_image.png'),
                 np.uint8(255 * np.clip(reg_patch_adv_img[:, :, ::-1], 0, 1)))
 
-    # Generate the GradCAM heatmap for the target category using the regular patch adv image
+    # Generate the GradCAM heatmap for the target category using the regular patch adversarial image
     reg_patch_adv_mask = gradcam(reg_patch_adv_tensor, target_index)
     show_cam_on_image(np.clip(reg_patch_adv_img[:, :, ::-1], 0, 1), reg_patch_adv_mask,
                       filename=os.path.join(args.result_dir, image_name + '_reg_adv_patch_gcam.JPEG'))
@@ -440,7 +448,7 @@ if __name__ == '__main__':
     cv2.imwrite(os.path.join(args.result_dir, image_name + '_our_adv_patch_image.png'),
                 np.uint8(255 * np.clip(our_patch_adv_img[:, :, ::-1], 0, 1)))
 
-    # Generate the GradCAM heatmap
+    # Generate the GradCAM heatmap for the target category using our patch adversarial image
     mask_adv_ = gradcam(our_patch_adv_tensor, target_index)
     show_cam_on_image(np.clip(our_patch_adv_img[:, :, ::-1], 0, 1), mask_adv_,
                       filename=os.path.join(args.result_dir, image_name + '_our_adv_patch_gcam.JPEG'))
