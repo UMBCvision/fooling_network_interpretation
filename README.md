@@ -1,7 +1,6 @@
 # Fooling Network Interpretation in Image Classification
 This is the PyTorch implementation for our ICCV 2019 paper - [Fooling Network Interpretation in Image Classification][1]
-Akshayvarun Subramanya*, Vipin Pillai*, Hamed Pirsiavash
-[https://www.csee.umbc.edu/~hpirsiav/papers/fooling_iccv19.pdf][1].
+Akshayvarun Subramanya*, Vipin Pillai*, Hamed Pirsiavash.
 
 Deep neural networks have been shown to be fooled rather easily using adversarial attack algorithms. Practical methods such as adversarial patches have been shown to be extremely effective in causing misclassification. However, these patches are highlighted using standard network interpretation algorithms, thus revealing the identity of the adversary. We show that it is possible to create adversarial patches which not only fool the prediction, but also change what we interpret regarding the cause of the prediction. Moreover, we introduce our attack as a controlled setting to measure the accuracy of interpretation algorithms. We show this using extensive experiments for Grad-CAM interpretation that transfers to occluding patch interpretation as well. We believe our algorithms can facilitate developing more robust network interpretation tools that truly explain the network’s underlying decision making process.
 
