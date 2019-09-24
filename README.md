@@ -14,7 +14,7 @@ Deep neural networks have been shown to be fooled rather easily using adversaria
 @article{fool_net_interp2019,
   title={Fooling Network Interpretation in Image Classification.},
   author={Akshayvarun Subramanya and Vipin Pillai and Hamed Pirsiavash},
-  journal={Internation Conference on Computer Vision},
+  journal={International Conference on Computer Vision},
   year={2019}
 }
 ```
@@ -31,6 +31,49 @@ The script `gradcam_targeted_patch_attack.py` takes as argument the input image 
 ### Usage
 `python gradcam_targeted_patch_attack.py --image-path ./examples/ILSVRC2012_val_00008855.JPEG --result-dir ./results`
 
+The mapping file for imagenet class labels to indices (0-999) can be found here - misc/imagenet1000_clsidx_to_labels.txt 
+
+### Results
+
+<table>
+    <tr>
+        <td align="center">
+          Original Image
+          <br/>
+            <img src="https://github.com/UMBCvision/fooling_network_interpretation/blob/master/examples/ILSVRC2012_val_00008855.JPEG" width="160" height="160"/>
+          <br/>
+          Paddle
+        </td>
+        <td align="center">
+          Adv. Patch
+          <br/>
+          <img src="https://github.com/UMBCvision/fooling_network_interpretation/blob/master/results/ILSVRC2012_val_00008855_reg_adv_patch_image.png" width="160" height="160"/>
+          <br/>
+          Box Turtle
+        </td>
+      <td align="center">
+        Adv. Patch - GCAM
+          <br/>
+          <img src="https://github.com/UMBCvision/fooling_network_interpretation/blob/master/results/ILSVRC2012_val_00008855_reg_adv_patch_gcam.JPEG" width="160" height="160"/>
+        <br/>
+          Box Turtle
+        </td>
+      <td align="center">
+        Our Patch
+          <br/>
+          <img src="https://github.com/UMBCvision/fooling_network_interpretation/blob/master/results/ILSVRC2012_val_00008855_our_adv_patch_image.png" width="160" height="160"/>
+        <br/>
+          Box Turtle
+        </td>
+      <td align="center">
+        Our Patch - GCAM
+          <br/>
+          <img src="https://github.com/UMBCvision/fooling_network_interpretation/blob/master/results/ILSVRC2012_val_00008855_our_adv_patch_gcam.JPEG" width="160" height="160"/>
+        <br/>
+          Box Turtle
+        </td>
+    </tr>
+</table>
 
 ### License
 MIT
