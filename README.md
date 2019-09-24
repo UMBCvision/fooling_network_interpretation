@@ -30,7 +30,7 @@ The script `gradcam_targeted_patch_attack.py` takes as argument the input image 
 ### Usage
 `python gradcam_targeted_patch_attack.py --image-path ./examples/ILSVRC2012_val_00008855.JPEG --result-dir ./results`
 
-The mapping file for imagenet class labels to indices (0-999) can be found here - misc/imagenet1000_clsidx_to_labels.txt 
+The mapping file for imagenet class labels to indices (0-999) can be found here - `misc/imagenet1000_clsidx_to_labels.txt` 
 
 ### Results
 
