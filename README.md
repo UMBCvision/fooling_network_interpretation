@@ -80,5 +80,5 @@ MIT
 ### Acknowledgement
 This work was performed under the following financial assistance award: 60NANB18D279 from U.S. Department of Commerce, National Institute of Standards and Technology, funding from SAP SE, and also NSF grant 1845216.
 
-[1]: https://www.csee.umbc.edu/~hpirsiav/papers/fooling_iccv19.pdf
+[1]: https://arxiv.org/pdf/1812.02843.pdf
 [teaser]: https://github.com/UMBCvision/fooling_network_interpretation/blob/master/misc/teaser.jpg
